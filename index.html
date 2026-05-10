@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para la mejor Mamá</title>
+    <style>
+        :root {
+            --pink-main: #ff4b6e;
+            --pink-soft: #ffccd5;
+            --pink-dark: #d63384;
+            --bg-color: #fff5f7;
+            --rose-stem: #228b22;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- PANTALLA DE ESCANEO  --- */
+        #scanner-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100;
+            transition: opacity 0.6s ease;
+        }
+
+        .instruction {
+            color: var(--pink-main);
+            font-size: 1.4rem; font-weight: bold;
+            margin-bottom: 30px; text-align: center;
+        }
+
+        .fingerprint-wrapper {
+            position: relative; width: 120px; height: 120px;
+            cursor: pointer;
+        }
+
+        .fingerprint-icon { width: 100%; height: 100%; fill: #e0e0e0; transition: fill 0.4s; }
+
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background-color: var(--pink-main);
+            box-shadow: 0 0 15px var(--pink-main);
+            display: none; z-index: 10;
+        }
+
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .scanning .scan-line { display: block; animation: scan 1.2s infinite alternate linear; }
+        .scanning .fingerprint-icon { fill: var(--pink-main); }
+
+        /* --- MENSAJE DE DETECCIÓN --- */
+        #detection-msg {
+            position: fixed; display: none;
+            font-size: 2rem; color: var(--pink-main); font-weight: bold;
+            text-align: center; z-index: 90;
+            animation: pulse 0.5s ease infinite alternate;
+        }
+        @keyframes pulse { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.1); opacity: 1; } }
+
+        /* --- PANTALLA FINAL --- */
+        #final-screen {
+            display: none;
+            opacity: 0;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s ease;
+        }
+
+        /* 1. Rosa (Arriba) */
+        .rose-container {
+            width: 150px;
+            height: 150px;
+            margin-bottom: -20px;
+            z-index: 2;
+        }
+
+        .rose-path {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+
+        /* Color de los pétalos */
+        .rose-petals { stroke: var(--pink-main); }
+        /* Color del tallo y hojas */
+        .rose-leaves { stroke: var(--rose-stem); }
+
+        .animate-rose {
+            animation: drawRose 3s ease-in-out forwards;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes drawRose {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* 2. Corazón y Texto */
+        .heart-container {
+            position: relative;
+            width: 90vw;
+            max-width: 450px;
+            height: 450px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        svg.heart-svg { width: 100%; height: 100%; }
+
+        .heart-path {
+            fill: none; stroke: var(--pink-main); stroke-width: 5;
+            stroke-linecap: round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
+        }
+
+        .animate-heart { animation: drawHeart 4s ease-in-out forwards; }
+
+        @keyframes drawHeart {
+            0% { stroke-dashoffset: 1000; }
+            80% { fill: transparent; }
+            100% { stroke-dashoffset: 0; fill: var(--pink-soft); }
+        }
+
+        .message {
+            position: absolute;
+            color: var(--pink-dark);
+            font-size: 1.8rem; font-weight: bold;
+            text-align: center;
+            opacity: 0; transform: scale(0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            max-width: 220px; line-height: 1.2;
+        }
+
+        .animate-text { animation: fadeInText 2s ease-out forwards; animation-delay: 3s; }
+        @keyframes fadeInText { to { opacity: 1; transform: scale(1); } }
+
+        /* 3. GIF (Abajo) */
+        .gif-container {
+            width: 100%;
+            max-width: 300px;
+            margin-top: -30px;
+            text-align: center;
+            opacity: 0;
+            z-index: 0;
+        }
+
+        .gif-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 15px; /* Bordes suaves */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .animate-gif {
+            animation: fadeInGif 2s ease-out forwards;
+            animation-delay: 5s;
+        }
+
+        @keyframes fadeInGif {
+            to { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla 1: Escáner -->
+    <div id="scanner-screen">
+        <div class="instruction">Mantén presionado para<br>identificar usuario</div>
+        <div class="fingerprint-wrapper" id="touch-area">
+            <div class="scan-line"></div>
+            <svg class="fingerprint-icon" viewBox="0 0 24 24">
+                <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.56.24.13.33.44.2.68-.1.15-.26.23-.43.23zm3.1 2.7c-.11 0-.22-.04-.31-.11-3.17-2.52-7.52-3.41-12.24-2.51-.27.05-.54-.12-.6-.39-.06-.27.12-.54.39-.6 5.11-.97 9.84.02 13.24 2.73.21.17.24.48.08.69-.14.19-.35.29-.56.29zm-16.1 4.75c-.06 0-.12-.01-.19-.04-.25-.11-.37-.4-.26-.65.91-2.09 2.37-3.81 4.23-4.99 3.51-2.22 7.73-2.3 11.23-.2 1.42.85 2.59 2.05 3.48 3.58.14.24.06.55-.18.69-.24.14-.55.06-.69-.18-.81-1.39-1.87-2.48-3.16-3.26-3.21-1.93-7.06-1.85-10.27.18-1.7 1.08-3.03 2.65-3.86 4.54-.08.19-.27.33-.49.33zM12 22c-.11 0-.21-.04-.3-.12C8.84 19.34 7 16.4 7 13c0-2.76 2.24-5 5-5s5 2.24 5 5c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.65-1.35-3-3-3s-3 1.35-3 3c0 2.87 1.54 5.41 4.05 7.58.21.18.24.5.06.71-.09.11-.23.17-.31.17zm4.5 0c-.07 0-.15-.02-.22-.06-1.12-.62-1.78-1.82-1.78-3.44 0-1.38-1.12-2.5-2.5-2.5s-2.5 1.12-2.5 2.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 1.95.84 3.44 2.19 4.19.24.14.33.44.19.68-.1.17-.28.28-.48.28z"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Pantalla Intermedia -->
+    <div id="detection-msg">✨ ¡Mamá Detectada! ✨</div>
+
+    <!-- Pantalla Final -->
+    <div id="final-screen">
+        
+        <!-- 1. Rosa SVG -->
+        <div class="rose-container">
+            <svg viewBox="0 0 100 100">
+                <!-- Tallo y hojas (Verde) -->
+                <path id="rose-stem" class="rose-path rose-leaves" d="M50,40 C50,60 50,80 50,95 M50,70 C40,65 30,70 25,75 M50,70 C60,65 70,70 75,75" />
+                <!-- Pétalos (Rosa) -->
+                <path id="rose-bloom" class="rose-path rose-petals" d="M50,40 C60,30 70,35 70,45 C70,55 60,65 50,70 C40,65 30,55 30,45 C30,35 40,30 50,40 Z M50,40 C55,35 60,38 60,42 C60,46 55,50 50,53 C45,50 40,46 40,42 C40,38 45,35 50,40 Z" />
+            </svg>
+        </div>
+
+        <!-- 2. Corazón y Texto -->
+        <h3>De: Luis Angel</h3>
+        <div class="heart-container">
+            <svg class="heart-svg" viewBox="0 0 500 500">
+                <path id="main-heart" class="heart-path" d="M250,140 C250,110 210,70 160,70 C100,70 60,130 60,190 C60,280 150,350 250,440 C350,350 440,280 440,190 C440,130 400,70 340,70 C290,70 250,110 250,140" />
+            </svg>
+            <div id="main-text" class="message">Feliz Día de las Madres</div>
+        </div>
+
+        <!-- 3. GIF (Abajo) -->
+        <div id="gif-area" class="gif-container">
+            <img src="https://media.tenor.com/pdX9YTI4_eoAAAAM/cat-cat-with-tongue.gif" alt="Flores para mamá">
+        </div>
+    </div>
+
+    <script>
+        const touchArea = document.getElementById('touch-area');
+        const scannerScreen = document.getElementById('scanner-screen');
+        const detectionMsg = document.getElementById('detection-msg');
+        const finalScreen = document.getElementById('final-screen');
+        
+        // Elementos de animación
+        const rosePath1 = document.getElementById('rose-stem');
+        const rosePath2 = document.getElementById('rose-bloom');
+        const heartPath = document.getElementById('main-heart');
+        const mainText = document.getElementById('main-text');
+        const gifArea = document.getElementById('gif-area');
+
+        let timer;
+        const duration = 2000;
+
+        function startScan() {
+            scannerScreen.classList.add('scanning');
+            timer = setTimeout(processDetection, duration);
+        }
+
+        function cancelScan() {
+            scannerScreen.classList.remove('scanning');
+            clearTimeout(timer);
+        }
+
+        function processDetection() {
+            scannerScreen.style.opacity = '0';
+            setTimeout(() => {
+                scannerScreen.style.display = 'none';
+                detectionMsg.style.display = 'block';
+                setTimeout(() => {
+                    detectionMsg.style.opacity = '0';
+                    setTimeout(() => {
+                        detectionMsg.style.display = 'none';
+                        showFinalSequence();
+                    }, 500);
+                }, 1500);
+            }, 600);
+        }
+
+        function showFinalSequence() {
+            // Muestra la pantalla final (contenedor principal)
+            finalScreen.style.display = 'flex';
+            
+            setTimeout(() => {
+                finalScreen.style.opacity = '1';
+                
+                // Inicia la secuencia coreografiada:
+                // 1. Corazón
+                heartPath.classList.add('animate-heart');
+                // 2. Rosa 
+                rosePath1.classList.add('animate-rose');
+                rosePath2.classList.add('animate-rose');
+                // 3. Texto 
+                mainText.classList.add('animate-text');
+                // 4. GIF 
+                gifArea.classList.add('animate-gif');
+
+            }, 50);
+        }
+
+        touchArea.addEventListener('mousedown', startScan);
+        touchArea.addEventListener('mouseup', cancelScan);
+        touchArea.addEventListener('mouseleave', cancelScan);
+        touchArea.addEventListener('touchstart', (e) => { e.preventDefault(); startScan(); });
+        touchArea.addEventListener('touchend', cancelScan);
+    </script>
+</body>
+</html>
